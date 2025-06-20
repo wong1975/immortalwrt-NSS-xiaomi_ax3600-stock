@@ -9,48 +9,52 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    name: Build Firmware
+    name: Compile Firmware
 
     steps:
-      - name: Checkout Source
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Build Environment
+      - name: Setup Build Environment
         run: |
-          sudo apt update
+          sudo apt-get update
           sudo apt install build-essential clang flex bison g++ gawk \
             gcc-multilib g++-multilib gettext git libncurses5-dev libssl-dev \
-            python3-setuptools rsync swig unzip zlib1g-dev file wget
+            python3-setuptools rsync swig unzip zlib1g-dev file wget subversion
 
-      - name: Setup Feeds
+      - name: Update Feeds
         run: |
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-      - name: Replace luci with immortalwrt versions
+      - name: Replace LuCI with ImmortalWrt versions
         run: |
           rm -rf feeds/luci/modules/luci-base
           rm -rf feeds/luci/modules/luci-mod-status
           svn export https://github.com/immortalwrt/luci/branches/master/modules/luci-base feeds/luci/modules/luci-base
           svn export https://github.com/immortalwrt/luci/branches/master/modules/luci-mod-status feeds/luci/modules/luci-mod-status
 
-      - name: Copy AX6 config
-        run: cp AX6.config .config
+      - name: Prepare Config
+        run: |
+          cp AX6.config .config
+          make defconfig
 
       - name: Download Sources
         run: make download -j$(nproc)
 
-      - name: Build Firmware
+      - name: Compile Firmware
         run: |
           make -j$(nproc) || make -j1 V=s
 
       - name: Upload Firmware to Release
         uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
             bin/targets/**/*/*.bin
             bin/targets/**/*.manifest
             bin/targets/**/*.buildinfo
             bin/targets/**/*.sha256sums
-          prerelease: true
+            .config
           draft: false
+          prerelease: false
