@@ -31,8 +31,13 @@ jobs:
         run: |
           rm -rf feeds/luci/modules/luci-base
           rm -rf feeds/luci/modules/luci-mod-status
-          svn export https://github.com/immortalwrt/luci/branches/master/modules/luci-base feeds/luci/modules/luci-base
-          svn export https://github.com/immortalwrt/luci/branches/master/modules/luci-mod-status feeds/luci/modules/luci-mod-status
+          git clone --filter=blob:none --no-checkout https://github.com/immortalwrt/luci.git
+          cd luci
+          git sparse-checkout init --cone
+          git sparse-checkout set modules/luci-base modules/luci-mod-status
+          git checkout master
+          cp -r modules/luci-base ../feeds/luci/modules/
+          cp -r modules/luci-mod-status ../feeds/luci/modules/
 
       - name: Prepare Config
         run: |
